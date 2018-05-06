@@ -7,15 +7,26 @@
     "localforage": "^1.5.6"
   },
   "devDependencies": {
-    "mocha": "^5.0.1",
+    "@types/localforage": "0.0.34",
     "chai": "^4.1.2",
-    "phantomjs-prebuilt": "^2.1.16",
-    "mocha-phantomjs-core": "^2.1.2"
+    "mocha": "^5.0.1",
+    "mocha-chrome": "^1.1.0"
   },
   "scripts": {
-    "test": "phantomjs ./node_modules/mocha-phantomjs-core/mocha-phantomjs-core.js test/index.html",
+    "test": "mocha-chrome test/index.html",
     "watch": "mocha -u bdd -R spec -t 500 --recursive --watch"
   },
   "author": "leonardoteck",
-  "license": "MIT"
+  "license": "MIT",
+  "directories": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitlab.com/nexteck/localentities.git"
+  },
+  "bugs": {
+    "url": "https://gitlab.com/nexteck/localentities/issues"
+  },
+  "homepage": "https://gitlab.com/nexteck/localentities#README"
 }

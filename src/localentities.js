@@ -1,32 +1,31 @@
-window.localEntities = new LocalEntities();
+
+var localEntities = new LocalEntities();
 
 function LocalEntities() {
-    "use strict";
+    'use strict';
 
     ////////////////////////// Declarações
 
-        var instance = this;
-        
-        var isReady = false; // Indica se as informações do banco foram carregadas
-        var entities = {}; // Lista com entidades registradas
-        var lastIds = {}; // Últimas IDs registradas para cada entidade. Serve para ter uma ID nova para cada objeto adicionado
-        var requests = []; // Alguns métodos públicos só podem ser executados depois que os dados do banco foram carregados
-        var ledb_lastIds = {}; // Instância da tabela que armazena as últimas IDs
-        var cache = {}; // Cache de todos os objetos que passaram por qualquer método
+        let isReady = false; // Indica se as informações do banco foram carregadas
+        let entities = {}; // Lista com entidades registradas
+        let lastIds = {}; // Últimas IDs registradas para cada entidade. Serve para ter uma ID nova para cada objeto adicionado
+        let requests = []; // Alguns métodos públicos só podem ser executados depois que os dados do banco foram carregados
+        let ledb_lastIds = {}; // Instância da tabela que armazena as últimas IDs
+        let cache = {}; // Cache de todos os objetos que passaram por qualquer método
 
-        instance.isRegistered = isRegistered;
-        instance.register = register;
-        instance.get = get;
-        instance.set = set;
-        instance.remove = remove;
-        instance.setRange = setRange;
-        instance.getAll = getAll;
-        instance.clear = clear;
-        instance.refresh = refresh;
+        this.isRegistered = isRegistered;
+        this.register = register;
+        this.get = get;
+        this.set = set;
+        this.remove = remove;
+        this.setRange = setRange;
+        this.getAll = getAll;
+        this.clear = clear;
+        this.refresh = refresh;
                 
         activate();
 
-    ////////////////////////// Inicialização
+    // ////////////////////////// Inicialização
 
         function activate() {
             ledb_lastIds = localforage.createInstance({
@@ -39,7 +38,7 @@ function LocalEntities() {
             }, function () {
                 isReady = true;
                 while (requests.length > 0) {
-                    var req = requests.shift();
+                    let req = requests.shift();
                     req.fn(req.resolve, req.reject);
                 }
             });
@@ -52,23 +51,60 @@ function LocalEntities() {
         }
 
         function register(constr, mapping) {
-            if (instance.isRegistered(constr))
+            if (isRegistered(constr))
                 return;
-            var name = constr.name;
+            let name = constr.name;
             entities[name] = (new Entity(name, constr, mapping));
         }
 
         function get(type, id, include) {
             return new Promise(function (resolve, reject) {
+                function getInclude(entity, id, include, node, leafProp) {
+                    getsLeft++;
+                    entity.store.getItem(id.toString()).then(function (value) {
+                        getsLeft--;
+                        
+                        if (!value) {
+                            tryResolve();
+                            return;
+                        }
+
+                        value = new entity.constr(value);
+
+                        if (node && leafProp)
+                            node[leafProp] = value;
+                        
+                        if (include.length == 0) {
+                            tryResolve();
+                            return;
+                        }
+
+                        let propToInclude = include.shift();
+                        let propMap = entity.mapping[propToInclude];
+                        
+                        if (value[propMap.relationKey])
+                            getInclude(entities[propMap.type], value[propMap.relationKey], include, value, propToInclude);
+                        else
+                            tryResolve();
+                    }).catch(reject);
+                }
+
+                function tryResolve() {
+                    if (getsLeft == 0)
+                        resolve(rootOfRoots);
+                }
+
+                let rootOfRoots;
+                let getsLeft = 0;
+                let entity = entities[type];
+
                 try {
-                    var rootOfRoots;
-                    var getsLeft = 0;
+
                     if (!include)
                         include = [];
                     else if (typeof include == 'string')
                         include = [include];
                         
-                    var entity = entities[type];
                     entity.store.getItem(id.toString()).then(function (value) {
 
                         rootOfRoots = new entity.constr(value);
@@ -78,8 +114,8 @@ function LocalEntities() {
                         else {
                             include.forEach(function(inc) {
                                 inc = inc.split('.');
-                                var propToInclude = inc.shift();
-                                var propMap = entity.mapping[propToInclude];
+                                let propToInclude = inc.shift();
+                                let propMap = entity.mapping[propToInclude];
 
                                 if (rootOfRoots[propMap.relationKey])
                                     getInclude(entities[propMap.type], rootOfRoots[propMap.relationKey], inc, rootOfRoots, propToInclude);
@@ -87,41 +123,6 @@ function LocalEntities() {
                             tryResolve();
                         }
                     });
-
-                    function getInclude(entity, id, include, node, leafProp) {
-                        getsLeft++;
-                        entity.store.getItem(id.toString()).then(function (value) {
-                            getsLeft--;
-                            
-                            if (!value) {
-                                tryResolve();
-                                return;
-                            }
-
-                            value = new entity.constr(value);
-
-                            if (node && leafProp)
-                                node[leafProp] = value;
-                            
-                            if (include.length == 0) {
-                                tryResolve();
-                                return;
-                            }
-
-                            var propToInclude = include.shift();
-                            var propMap = entity.mapping[propToInclude];
-                            
-                            if (value[propMap.relationKey])
-                                getInclude(entities[propMap.type], value[propMap.relationKey], include, value, propToInclude);
-                            else
-                                tryResolve();
-                        }).catch(reject);
-                    }
-
-                    function tryResolve() {
-                        if (getsLeft == 0)
-                            resolve(rootOfRoots);
-                    }
                 } catch (ex) {
                     reject(ex);
                 }
@@ -142,8 +143,8 @@ function LocalEntities() {
                     resolveGetAll(type, include, resolve, reject);
 
                 try {
-                    var res = [];
-                    var entity = entities[type];
+                    let res = [];
+                    let entity = entities[type];
                     
                     entity.store.iterate(function(value, key, iterationNumber) {
                         res.push(value);
@@ -157,7 +158,7 @@ function LocalEntities() {
         }
         
         function set(id, value) {
-            var entity;
+            let entity;
             if (id && typeof id == 'object' && !value) {
                 value = id;
                 entity = getEntity(value);
@@ -171,9 +172,9 @@ function LocalEntities() {
         function setRange(values) {
             if (!(values instanceof Array) || values.length == 0)
                 return;
-            var entity = getEntity(values[0]);
+            let entity = getEntity(values[0]);
             values.forEach(function(value) {
-                var id = value[entity.propId];
+                let id = value[entity.propId];
                 prepare(id, value, entity);                
             });
         }
@@ -181,7 +182,7 @@ function LocalEntities() {
         function remove(type, id, include) {
             return new Promise(function (resolve, reject) {
                 try {
-                    var entity = entities[type];
+                    let entity = entities[type];
                     
                     entity.store.removeItem(id.toString()).then(function() {
                         resolve();
@@ -209,10 +210,10 @@ function LocalEntities() {
         function refresh(values) {
             if (!(values instanceof Array) || values.length == 0)
                 return;
-            var entity = getEntity(values[0]);
+            let entity = getEntity(values[0]);
             entity.store.clear().then(function () {
                 values.forEach(function(value) {
-                    var id = value[entity.propId];
+                    let id = value[entity.propId];
                     prepare(id, value, entity);                
                 });
             });
@@ -223,12 +224,12 @@ function LocalEntities() {
         ///////// Funções do Set
 
         function prepare(id, value, entity, idSup, valueSup) {
-            var refValue = value;
+            let refValue = value;
             if (refValue instanceof Array)
                 refValue = refValue[0];
 
-            var idMap = entity.mapping[entity.propId]; // pega a o mapeamento da id
-            var saveId = '';
+            let idMap = entity.mapping[entity.propId]; // pega a o mapeamento da id
+            let saveId = '';
 
             if (!id) {
                 id = (++lastIds[entity.constr.name]) * -1; // id de adição é negativa pra não dar conflito
@@ -242,7 +243,7 @@ function LocalEntities() {
                 valueSup[idSup] = id;
                 
             if (value instanceof Array)
-                for (var i = 0; i < value.length; i++)
+                for (let i = 0; i < value.length; i++)
                     separate(value[i], entity);
             else
                 separate(value, entity);
@@ -254,8 +255,8 @@ function LocalEntities() {
         }
 
         function separate(value, entity) {
-            for (var j = 0; j < entity.relations.length; j++) {
-                var relation = entity.relations[j];
+            for (let j = 0; j < entity.relations.length; j++) {
+                let relation = entity.relations[j];
                 if (value[relation.relProp]) { // achou o obj. de relacionamento
                     prepare(value[relation.fkProp],
                         value[relation.relProp],
@@ -268,31 +269,34 @@ function LocalEntities() {
         }
 
         function getEntity(value) {
-            var refValue = value;
+            let refValue = value;
             if (refValue instanceof Array)
                 refValue = refValue[0];
+
+            if (typeof refValue !== 'object')
+                throw new TypeError(errFn('Only objects or arrays of objects can be stored'));
             
-            var constr = Object.getPrototypeOf(refValue).constructor;
-            var entity = entities[constr.name];
+            let constr = Object.getPrototypeOf(refValue).constructor;
+            let entity = entities[constr.name];
             if (entity)
                 return entity;                
 
-            var count = {};
-            for (var entName in entities)
+            let count = {};
+            for (let entName in entities)
                 if (entities.hasOwnProperty(entName)) {
-                    var ent = entities[entName];
+                    let ent = entities[entName];
                     count[entName] = 0;
-                    for (var mapKey in ent.mapping)
+                    for (let mapKey in ent.mapping)
                         if (ent.mapping.hasOwnProperty(mapKey))
-                            for (var valueProp in value)
+                            for (let valueProp in value)
                                 if (value.hasOwnProperty(valueProp) && valueProp == mapKey) {
                                     count[entName]++;
                                     break;
                                 }
                 }   
             
-            var chosen = [];
-            for (var key in count) {
+            let chosen = [];
+            for (let key in count) {
                 if (count.hasOwnProperty(key)) {
                     if (chosen.length == 0)
                         chosen.push({
@@ -311,7 +315,7 @@ function LocalEntities() {
             }
 
             if (chosen.length > 1) {
-                var one = chosen[0];
+                let one = chosen[0];
                 chosen.forEach(function (ch) {
                     ch.count = Math.abs(ch.count - Object.getOwnPropertyNames(entities[ch.key].mapping).length);
                     if (ch.count < one.count)
@@ -319,6 +323,8 @@ function LocalEntities() {
                 });
                 chosen = [one];
             }
+            if (chosen.length == 0)
+                throw new TypeError(errFn('Entity not registered'));
             return entities[chosen[0].key];
         }
 
@@ -332,7 +338,7 @@ function LocalEntities() {
         }
 
         function errFn(msg) {
-            alert('Error in localEntities: ' + msg);
+            return 'Error in localEntities: ' + msg;
         }
         
         function Entity(name, constr, mapping) {
@@ -340,7 +346,7 @@ function LocalEntities() {
             this.mapping = mapping;
             
             this.relations = [];
-            for (var rel in mapping)
+            for (let rel in mapping)
                 if (mapping.hasOwnProperty(rel) && mapping[rel].relationKey)
                     this.relations.push({
                         fkProp: mapping[rel].relationKey,
