@@ -11,10 +11,7 @@
     <div id="mocha"></div>
     <script src="../node_modules/mocha/mocha.js"></script>
     <script src="../node_modules/chai/chai.js"></script>
-    <script>
-        mocha.setup("bdd");
-        var expect = chai.expect;    
-    </script>
+    <script src="setup/browserified.js"></script>
 
     <!-- Localentities dependencies -->
     <script src="../node_modules/localforage/dist/localforage.min.js"></script>
@@ -22,9 +19,12 @@
     <!-- The localentities itself -->
     <script src="../src/localentities.js"></script>
 
+    <!-- Test dependencies and miscellaneous stuff -->
+    <script src="stuffAndSuch/differentKindsOfClasses.js"></script>
+
     <!-- Test scripts -->
-    <script src="beforeAnythingElse.js"></script>
-    <script src="basics.js"></script>
+    <script src="assertions/beforeAnythingElse.js"></script>
+    <script src="assertions/basics.js"></script>
     
     <!-- Final command -->
     <script>mocha.run();</script>

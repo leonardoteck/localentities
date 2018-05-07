@@ -97,19 +97,20 @@ function LocalEntities() {
                 let rootOfRoots;
                 let getsLeft = 0;
                 let entity = entities[type];
+                if (!entity)
+                    reject(errFn('Entity not registered'));
 
                 try {
-
                     if (!include)
                         include = [];
-                    else if (typeof include == 'string')
+                    else if (typeof include === 'string')
                         include = [include];
                         
                     entity.store.getItem(id.toString()).then(function (value) {
 
                         rootOfRoots = new entity.constr(value);
 
-                        if (include.length == 0)
+                        if (include.length === 0)
                             resolve(rootOfRoots);
                         else {
                             include.forEach(function(inc) {
@@ -341,31 +342,28 @@ function LocalEntities() {
             return 'Error in localEntities: ' + msg;
         }
         
-        function Entity(name, constr, mapping) {
-            this.constr = constr;
-            this.mapping = mapping;
-            
-            this.relations = [];
-            for (let rel in mapping)
-                if (mapping.hasOwnProperty(rel) && mapping[rel].relationKey)
-                    this.relations.push({
-                        fkProp: mapping[rel].relationKey,
-                        relProp: rel,
-                        fk: mapping[mapping[rel].relationKey],
-                        rel: mapping[rel]
-                    });
-
-            
-            if (!lastIds[name])
-                lastIds[name] = 0;
-            
-            this.propId = Object.getOwnPropertyNames(this.mapping).find(function (prop) { // pega o nome da prop pk
-                return mapping[prop].pk === true;
-            });
-            
-            this.store = localforage.createInstance({
-                name: 'AppDB',
-                storeName: name
-            });
+        class Entity {
+            constructor(name, constr, mapping) {
+                this.constr = constr;
+                this.mapping = mapping;
+                this.relations = [];
+                for (let rel in mapping)
+                    if (mapping.hasOwnProperty(rel) && mapping[rel].relationKey)
+                        this.relations.push({
+                            fkProp: mapping[rel].relationKey,
+                            relProp: rel,
+                            fk: mapping[mapping[rel].relationKey],
+                            rel: mapping[rel]
+                        });
+                if (!lastIds[name])
+                    lastIds[name] = 0;
+                this.propId = Object.getOwnPropertyNames(this.mapping).find(function (prop) {
+                    return mapping[prop].pk === true;
+                });
+                this.store = localforage.createInstance({
+                    name: 'AppDB',
+                    storeName: name
+                });
+            }
         }
 }

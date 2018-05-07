@@ -1,13 +1,6 @@
 /// <reference types="../node_modules/localforage/typings/localforage.d.ts">
-
-describe('The most basic tests', function () {
-    class Es6Class {
-        constructor(propA, propB) {
-            this.propA = propA;
-            this.propB = propB;
-        }
-    }
-
+var expect = chai.expect;
+describe('Things that can\'t happen in the first use', function () {
     before(function () {
         localforage.clear();
     });
@@ -17,12 +10,15 @@ describe('The most basic tests', function () {
         expect(() => localEntities.set(1234)).to.throw(TypeError);
         expect(() => localEntities.set(null)).to.throw(TypeError);
         expect(() => localEntities.set(false)).to.throw(TypeError);
+        expect(() => localEntities.set([[{}]])).to.throw(TypeError);
     });
 
-    it('won\'t store an unregistered entity (this may be for the future)', function () {
+    it('won\'t store an unregistered entity', function () {
         expect(() => localEntities.set({ prop: 'just being random' })).to.throw(/not registered/ig);
         expect(() => localEntities.set(new Es6Class('asdf', 1234))).to.throw(/not registered/ig);
     });
 
-
+    it('won\'t get not registered entities', function () {
+        expect(localEntities.get('Es6Class', 37)).to.be.rejectedWith(/not registered/ig);
+    });
 });
