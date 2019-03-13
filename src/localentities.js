@@ -96,6 +96,13 @@ function LocalEntities() {
 
                 let rootOfRoots;
                 let getsLeft = 0;
+                
+                type = checkType(type);
+                if (type === null) {
+                    reject(errFn('Invalid type'));
+                    return;
+                }
+                
                 let entity = entities[type];
                 if (!entity)
                     reject(errFn('Entity not registered'));
@@ -339,7 +346,15 @@ function LocalEntities() {
         }
 
         function errFn(msg) {
-            return 'Error in localEntities: ' + msg;
+            return `Error in localEntities: ${msg}`;
+        }
+
+        function checkType(type) {
+            if (type !== null && typeof type === 'function' && type.name !== null)
+                return type.name;
+            else if (typeof type !== 'string' || type === '')
+                return null;
+            return type;
         }
         
         class Entity {
